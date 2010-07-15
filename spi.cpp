@@ -1,8 +1,18 @@
 /*
- * spi.cpp
+ * Copyright (C) 2010 Andreas Wetzel
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
- *  Created on: Jun 10, 2010
- *      Author: andi
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #include <wiring.h>
@@ -13,7 +23,8 @@
 #define SCK_PIN   52
 #define SS_PIN    53
 
-SPI::SPI() {
+SPI::SPI()
+{
 	  // initialize the SPI pins
 	  pinMode(SCK_PIN, OUTPUT);
 	  pinMode(MOSI_PIN, OUTPUT);
@@ -21,22 +32,28 @@ SPI::SPI() {
 	  pinMode(SS_PIN, OUTPUT);
 
 	  // enable SPI Master, MSB, SPI mode 0, FOSC/4
-	  mode( CPOL_LO_CPHA_LO);
+	  setup();
 }
 
 
-void SPI::mode( ESpiMode mode) {
+void SPI::setup( ESpiMode mode, ESpiDataOrder order, bool auto_cs)
+{
 	  // enable SPI master with configuration byte specified
-	  SPCR = 0;
-	  SPCR = (mode & 0x7F) | (1<<SPE) | (1<<MSTR)| (1<<SPR1) | (1<<SPR0);
+	  SPCR = mode | order | (1<<SPE) | (1<<MSTR) | (1<<SPR1) | (1<<SPR0);
+	  _auto_cs = auto_cs;
+	  setCS( false);
+}
+
+void SPI::setCS( bool setCS) {
+	digitalWrite( SS_PIN, (setCS) ? LOW : HIGH);
 }
 
 byte SPI::transfer(byte value)
 {
-  digitalWrite( SS_PIN, LOW);
+  if (_auto_cs) setCS( true);
   SPDR = value;
-  while (!(SPSR & (1<<SPIF))) ;
-  digitalWrite( SS_PIN, HIGH);
+  while (!(SPSR & (1<<SPIF)));
+  if (_auto_cs) setCS( false);
   return SPDR;
 }
 
